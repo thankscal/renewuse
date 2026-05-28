@@ -1231,7 +1231,7 @@ def generate_from_bytes(template_bytes, work_bytes, params, qp_r9_bytes=None):
     ac_type  = '/'.join(p.get('acTypes',[]))
     position = p.get('position','')
     is_tech  = ('無授權' in position) and (qp_r9_bytes is not None)
-    rows_per_page = 10 if is_tech else 11  # Increased from 7/8 to 10/11 to fit on 1 page
+    rows_per_page = 7 if is_tech else 8  # Increased from 7/8 to 10/11 to fit on 1 page
 
     wb_d = load_workbook(io.BytesIO(work_bytes), data_only=True)
     work_rows = []
