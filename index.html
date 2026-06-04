@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工作經歷自動填表系統 (專業優化版)</title>
+    <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css" />
+    <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
+    <style>
+        body { font-family: "Microsoft JhengHei", sans-serif; max-width: 850px; margin: 20px auto; padding: 20px; line-height: 1.6; background-color: #f4f7f6; }
+        .container { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #0056b3; text-align: center; margin-bottom: 20px; }
+        .section { border: 1px solid #eee; padding: 20px; margin-bottom: 25px; border-radius: 6px; }
+        .section h3 { margin-top: 0; border-bottom: 2px solid #0056b3; padding-bottom: 5px; color: #333; font-size: 1.2em; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; }
+        input[type="text"], input[type="date"], input[type="file"] { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; transition: border 0.3s; }
+        input:focus { border-color: #0056b3; outline: none; }
+        .checkbox-group { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; padding: 10px; background: #fafafa; border-radius: 4px; }
+        .checkbox-item { display: flex; align-items: center; font-size: 0.9em; cursor: pointer; }
+        .checkbox-item input { margin-right: 8px; width: auto; cursor: pointer; }
+        .submit-btn { background: #0056b3; color: white; padding: 15px 20px; border: none; cursor: pointer; font-size: 18px; width: 100%; border-radius: 4px; margin-top: 20px; font-weight: bold; }
+        .submit-btn:disabled { background: #ccc; cursor: not-allowed; }
+        #status-container { margin-top: 20px; display: none; }
+        .progress-bar { width: 100%; height: 10px; background: #eee; border-radius: 5px; overflow: hidden; margin-bottom: 10px; }
+        .progress-fill { height: 100%; background: #0056b3; width: 0%; transition: width 0.5s; }
+        #status-text { text-align: center; font-size: 0.9em; color: #666; }
+        .hint { font-size: 0.85em; color: #888; margin-top: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>工作經歷自動填表系統</h1>
+        
+        <div id="status-container">
+            <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
+            <div id="status-text">正在準備 Python 環境 (預計需 15-20 秒)...</div>
+        </div>
+
+        <div class="section">
+            <h3>1. 基本資料</h3>
+            <div class="form-group">
+                <label>我的名字 (全名):</label>
+                <input type="text" id="full_name" placeholder="例如：王小明">
+            </div>
+            <div class="form-group">
+                <label>工號 (ID):</label>
+                <input type="text" id="id_no">
+            </div>
+            <div class="form-group">
+                <label>生日:</label>
+                <input type="date" id="birthday">
+            </div>
+            <div class="form-group">
+                <label>國籍:</label>
+                <input type="text" id="nationality" value="中華民國">
+            </div>
+            <div class="form-group">
+                <label>永久住址:</label>
+                <input type="text" id="address">
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>2. 執照與工作資訊</h3>
+            <div class="form-group">
+                <label>執照號碼:</label>
+                <input type="text" id="license_no">
+            </div>
+            <div class="form-group">
+                <label>執照類別:</label>
+                <input type="text" id="license_type" value="B1.1">
+            </div>
+            <div class="form-group">
+                <label>工作地點:</label>
+                <div style="display: flex; gap: 30px; padding: 10px 0;">
+                    <label class="checkbox-item"><input type="radio" name="location_city" value="桃園" checked> 桃園 (CKS)</label>
+                    <label class="checkbox-item"><input type="radio" name="location_city" value="高雄"> 高雄 (KHH)</label>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>工作機型 (可複選):</label>
+                <div class="checkbox-group" id="aircraft_group">
+                    <label class="checkbox-item"><input type="checkbox" value="B737-800"> B737-800</label>
+                    <label class="checkbox-item"><input type="checkbox" value="B747-400"> B747-400</label>
+                    <label class="checkbox-item"><input type="checkbox" value="B-777-300"> B-777-300</label>
+                    <label class="checkbox-item"><input type="checkbox" value="B787"> B787</label>
+                    <label class="checkbox-item"><input type="checkbox" value="A330-300"> A330-300</label>
+                    <label class="checkbox-item"><input type="checkbox" value="A350-900"> A350-900</label>
+                    <label class="checkbox-item"><input type="checkbox" value="A321NEO"> A321NEO</label>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>聘僱日期 (自):</label>
+                <input type="date" id="hire_date_from">
+            </div>
+            <div class="form-group">
+                <label>職務:</label>
+                <input type="text" id="position" value="修護員">
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>3. 檔案上傳</h3>
+            <div class="form-group">
+                <label>上傳 Word 模板 (.docx):</label>
+                <input type="file" id="word_template" accept=".docx">
+            </div>
+            <div class="form-group">
+                <label>上傳工作經歷 (Excel):</label>
+                <input type="file" id="excel_data" accept=".xlsx">
+            </div>
+        </div>
+
+        <button id="process_btn" class="submit-btn">產生並下載 WORD</button>
+    </div>
+
+    <py-config>
+        packages = ["pandas", "openpyxl", "python-docx"]
+    </py-config>
+
+    <script type="py">
+        from pyscript import document
+        from pyodide.ffi import create_proxy
+        import pandas as pd
+        from docx import Document
+        from docx.shared import Pt
+        from docx.oxml import parse_xml
+        from docx.oxml.ns import nsdecls
+        import io
+        import base64
+        import time
+
+        async def process_files(event):
+            container = document.getElementById("status-container")
+            fill = document.getElementById("progress-fill")
+            text = document.getElementById("status-text")
+            btn = document.getElementById("process_btn")
+            
+            container.style.display = "block"
+            btn.disabled = True
+            
+            def update_progress(pct, msg):
+                fill.style.width = f"{pct}%"
+                text.innerText = msg
+
+            try:
+                update_progress(10, "讀取表單數據...")
+                full_name = document.getElementById("full_name").value
+                id_no = document.getElementById("id_no").value
+                birthday = document.getElementById("birthday").value
+                nationality = document.getElementById("nationality").value
+                address = document.getElementById("address").value
+                license_no = document.getElementById("license_no").value
+                license_type = document.getElementById("license_type").value
+                hire_date_from = document.getElementById("hire_date_from").value
+                position = document.getElementById("position").value
+                
+                aircraft_list = [cb.value for cb in document.querySelectorAll("#aircraft_group input:checked")]
+                aircraft_type = "/".join(aircraft_list)
+                
+                location_city = "桃園"
+                for r in document.getElementsByName("location_city"):
+                    if r.checked: location_city = r.value
+                location_code = "CAL-EMO/CKS" if location_city == "桃園" else "CAL-EMO/KHH"
+
+                update_progress(20, "讀取檔案內容...")
+                word_input = document.getElementById("word_template")
+                excel_input = document.getElementById("excel_data")
+                if not word_input.files or not excel_input.files:
+                    alert("請先上傳兩個檔案！")
+                    return
+
+                word_bytes = (await word_input.files.item(0).arrayBuffer()).to_bytes()
+                excel_bytes = (await excel_input.files.item(0).arrayBuffer()).to_bytes()
+                
+                doc = Document(io.BytesIO(word_bytes))
+                df = pd.read_excel(io.BytesIO(excel_bytes))
+
+                update_progress(40, "正在精確刪除無關頁面...")
+                # 策略：保留 Table 3, 4, 5 (第9頁) 和 Table 12 (第13頁模板)
+                # 刪除其他表格
+                tables_to_keep = [doc.tables[3], doc.tables[4], doc.tables[5], doc.tables[12]]
+                all_tables = list(doc.tables)
+                for t in all_tables:
+                    if t not in tables_to_keep:
+                        # 刪除表格的 XML 節點
+                        t._element.getparent().remove(t._element)
+
+                update_progress(60, "填寫個人資訊與封面...")
+                # 封面
+                for p in doc.paragraphs:
+                    if "姓名(Name)" in p.text:
+                        p.text = p.text.replace("姓名(Name) :", f"姓名(Name) : {full_name}")
+                        p.text = p.text.replace("員工號(ID) :", f"員工號(ID) : {id_no}")
+
+                # 第九頁
+                t3, t4, t5 = tables_to_keep[0], tables_to_keep[1], tables_to_keep[2]
+                t3.cell(1, 1).text = full_name[0] if full_name else ""
+                t3.cell(1, 3).text = full_name[1:] if len(full_name) > 1 else ""
+                t3.cell(2, 1).text = birthday
+                t3.cell(2, 3).text = nationality
+                t3.cell(3, 1).text = address
+                t4.cell(0, 1).text = "台灣"
+                t4.cell(0, 2).text = license_no
+                t4.cell(0, 3).text = license_type
+                for col in [0, 4]:
+                    t5.cell(0, col + 2).text = "中華航空"
+                    t5.cell(1, col + 2).text = hire_date_from
+                    t5.cell(1, col + 3).text = "迄今"
+                    t5.cell(2, col + 2).text = position
+                    t5.cell(2, col + 4).text = "飛機修護"
+                    t5.cell(3, col + 2).text = aircraft_type
+
+                update_progress(80, "處理工作經歷 (分頁複製樣式)...")
+                exp_template = tables_to_keep[3]
+                records_per_page = 7
+                
+                def fill_row(table, row_idx, row_data):
+                    cells = table.rows[row_idx].cells
+                    data_map = {
+                        0: str(row_data['日期']).split(' ')[0],
+                        1: location_code,
+                        3: str(row_data['機號']),
+                        4: "A1-Line",
+                        5: license_type,
+                        17: "V",
+                        21: str(row_data['任務描述']),
+                        22: str(row_data['實際工時'])
+                    }
+                    for idx, val in data_map.items():
+                        cells[idx].text = val
+                        for p in cells[idx].paragraphs:
+                            for r in p.runs:
+                                r.font.size = Pt(8)
+                                if idx == 21: r.font.size = Pt(7)
+                                if idx == 17: r.font.name = 'Arial' # 強制 Arial 確保 V 正確
+
+                # 填寫第一頁
+                for i in range(min(records_per_page, len(df))):
+                    fill_row(exp_template, i + 2, df.iloc[i])
+
+                # 處理後續頁面
+                if len(df) > records_per_page:
+                    for i in range(records_per_page, len(df), records_per_page):
+                        doc.add_page_break()
+                        # 使用 XML 層級複製表格樣式
+                        new_tbl_xml = copy.deepcopy(exp_template._element)
+                        # 清空複製過來的數據行 (Row 2-8)
+                        new_tbl = doc.add_table(rows=0, cols=0) # 佔位
+                        new_tbl._element.getparent().replace(new_tbl._element, new_tbl_xml)
+                        actual_new_table = doc.tables[-1] # 獲取剛替換進去的表格
+                        
+                        # 清除舊數據
+                        for r_idx in range(2, 9):
+                            for c_idx in range(len(actual_new_table.columns)):
+                                actual_new_table.cell(r_idx, c_idx).text = ""
+
+                        page_end = min(i + records_per_page, len(df))
+                        for j in range(i, page_end):
+                            fill_row(actual_new_table, (j % records_per_page) + 2, df.iloc[j])
+
+                update_progress(100, "處理完成！正在下載...")
+                out_buffer = io.BytesIO()
+                doc.save(out_buffer)
+                out_buffer.seek(0)
+                content = base64.b64encode(out_buffer.read()).decode()
+                href = f"data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,{content}"
+                
+                link = document.createElement("a")
+                link.href = href
+                link.download = f"Filled_Logbook_{int(time.time())}.docx"
+                link.click()
+
+            except Exception as e:
+                print(f"Error: {e}")
+                alert(f"處理失敗：{e}")
+            finally:
+                btn.disabled = False
+                setTimeout(create_proxy(lambda: setattr(container.style, 'display', 'none')), 3000)
+
+        from js import setTimeout
+        document.getElementById("process_btn").onclick = create_proxy(process_files)
+    </script>
+</body>
+</html>
