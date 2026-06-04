@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工作經歷自動填表系統 (前端版)</title>
+    <!-- 引入 PyScript 資源 -->
+    <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css" />
+    <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
+    <style>
+        body { font-family: "Microsoft JhengHei", sans-serif; max-width: 800px; margin: 20px auto; padding: 20px; line-height: 1.6; background-color: #f4f7f6; }
+        .container { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #0056b3; text-align: center; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; }
+        input[type="text"], input[type="date"], input[type="file"], select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        .radio-group { display: flex; gap: 20px; padding: 10px 0; }
+        .submit-btn { background: #0056b3; color: white; padding: 12px 20px; border: none; cursor: pointer; font-size: 18px; width: 100%; border-radius: 4px; margin-top: 20px; }
+        .submit-btn:hover { background: #004494; }
+        .section { border: 1px solid #eee; padding: 20px; margin-bottom: 25px; border-radius: 6px; }
+        .section h3 { margin-top: 0; border-bottom: 2px solid #0056b3; padding-bottom: 5px; color: #333; }
+        .hint { font-size: 0.9em; color: #666; margin-top: 5px; }
+        #loading { display: none; text-align: center; color: #0056b3; font-weight: bold; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>工作經歷自動填表系統</h1>
+        <p style="color: red; text-align: center; font-size: 0.9em;">注意：請務必上傳 .docx 格式的模板檔案</p>
+        
+        <div class="section">
+            <h3>1. 工作地點</h3>
+            <div class="radio-group">
+                <label><input type="radio" name="location_city" value="桃園" checked> 桃園 (CAL-EMO/CKS)</label>
+                <label><input type="radio" name="location_city" value="高雄"> 高雄 (CAL-EMO/KHH)</label>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>2. 基本資料</h3>
+            <div class="form-group">
+                <label>我的名字 (全名):</label>
+                <input type="text" id="full_name" placeholder="例如：王小明">
+            </div>
+            <div class="form-group">
+                <label>工號 (ID):</label>
+                <input type="text" id="id_no">
+            </div>
+            <div class="form-group">
+                <label>生日:</label>
+                <input type="date" id="birthday">
+            </div>
+            <div class="form-group">
+                <label>國籍:</label>
+                <input type="text" id="nationality" value="中華民國">
+            </div>
+            <div class="form-group">
+                <label>永久住址:</label>
+                <input type="text" id="address">
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>3. 執照與聘僱資訊</h3>
+            <div class="form-group">
+                <label>執照號碼:</label>
+                <input type="text" id="license_no">
+            </div>
+            <div class="form-group">
+                <label>執照類別:</label>
+                <input type="text" id="license_type" value="B1.1">
+                <div class="hint">預設為 B1.1，可自行修改</div>
+            </div>
+            <div class="form-group">
+                <label>聘僱日期 (自):</label>
+                <input type="date" id="hire_date_from">
+            </div>
+            <div class="form-group">
+                <label>職務:</label>
+                <input type="text" id="position" placeholder="例如：修護員">
+            </div>
+            <div class="form-group">
+                <label>工作機型:</label>
+                <input type="text" id="aircraft_type" placeholder="例如：A350, B777">
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>4. 檔案上傳</h3>
+            <div class="form-group">
+                <label>上傳 Word 模板 (.docx):</label>
+                <input type="file" id="word_template" accept=".docx">
+            </div>
+            <div class="form-group">
+                <label>上傳工作經歷 (Excel):</label>
+                <input type="file" id="excel_data" accept=".xlsx">
+            </div>
+        </div>
+
+        <button id="process_btn" class="submit-btn">產生並下載 WORD</button>
+        <div id="loading">正在處理中，請稍候... (初次運行需載入 Python 環境)</div>
+    </div>
+
+    <!-- PyScript 配置與程式碼 -->
+    <py-config>
+        packages = ["pandas", "openpyxl", "python-docx"]
+    </py-config>
+
+    <script type="py">
+        from pyscript import document
+        from pyodide.ffi import create_proxy
+        import pandas as pd
+        from docx import Document
+        import io
+        import base64
+
+        async def process_files(event):
+            document.getElementById("loading").style.display = "block"
+            document.getElementById("process_btn").disabled = True
+            
+            try:
+                # 1. 讀取表單數據
+                full_name = document.getElementById("full_name").value
+                last_name = full_name[0] if full_name else ""
+                first_name = full_name[1:] if len(full_name) > 1 else ""
+                
+                id_no = document.getElementById("id_no").value
+                birthday = document.getElementById("birthday").value
+                nationality = document.getElementById("nationality").value
+                address = document.getElementById("address").value
+                license_no = document.getElementById("license_no").value
+                license_type = document.getElementById("license_type").value
+                hire_date_from = document.getElementById("hire_date_from").value
+                position = document.getElementById("position").value
+                aircraft_type = document.getElementById("aircraft_type").value
+                
+                # 獲取 Radio Button 值
+                location_city = "桃園"
+                radios = document.getElementsByName("location_city")
+                for r in radios:
+                    if r.checked:
+                        location_city = r.value
+                
+                location_code = "CAL-EMO/CKS" if location_city == "桃園" else "CAL-EMO/KHH"
+
+                # 2. 讀取上傳的檔案
+                word_input = document.getElementById("word_template")
+                excel_input = document.getElementById("excel_data")
+                
+                if not word_input.files or not excel_input.files:
+                    alert("請先上傳兩個檔案！")
+                    return
+
+                # 讀取 Word
+                word_file = word_input.files.item(0)
+                word_array_buffer = await word_file.arrayBuffer()
+                word_bytes = word_array_buffer.to_bytes()
+                doc = Document(io.BytesIO(word_bytes))
+
+                # 讀取 Excel
+                excel_file = excel_input.files.item(0)
+                excel_array_buffer = await excel_file.arrayBuffer()
+                excel_bytes = excel_array_buffer.to_bytes()
+                df = pd.read_excel(io.BytesIO(excel_bytes))
+
+                # 3. 執行填寫邏輯
+                # 封面
+                for p in doc.paragraphs:
+                    if "姓名(Name)" in p.text:
+                        p.text = p.text.replace("姓名(Name) :", f"姓名(Name) : {full_name}")
+                        p.text = p.text.replace("員工號(ID) :", f"員工號(ID) : {id_no}")
+
+                # 第九頁個人資訊
+                t3 = doc.tables[3]
+                t3.cell(1, 1).text = last_name
+                t3.cell(1, 3).text = first_name
+                t3.cell(2, 1).text = birthday
+                t3.cell(2, 3).text = nationality
+                t3.cell(3, 1).text = address
+
+                t4 = doc.tables[4]
+                t4.cell(0, 1).text = "台灣"
+                t4.cell(0, 2).text = license_no
+                t4.cell(0, 3).text = license_type
+
+                t5 = doc.tables[5]
+                t5.cell(0, 2).text = "中華航空"
+                t5.cell(1, 2).text = hire_date_from
+                t5.cell(1, 3).text = "迄今"
+                t5.cell(2, 2).text = position
+                t5.cell(2, 4).text = "飛機修護"
+                t5.cell(3, 2).text = aircraft_type
+
+                # 工作經歷 (Table 12)
+                template_table = doc.tables[12]
+                records_per_page = 7
+                
+                def fill_exp_row(table, row_idx, row_data):
+                    table.cell(row_idx, 0).text = str(row_data['日期']).split(' ')[0]
+                    table.cell(row_idx, 1).text = location_code
+                    table.cell(row_idx, 3).text = str(row_data['機號'])
+                    table.cell(row_idx, 4).text = "A1-Line"
+                    table.cell(row_idx, 5).text = license_type
+                    table.cell(row_idx, 17).text = "V"
+                    table.cell(row_idx, 21).text = str(row_data['任務描述'])
+                    table.cell(row_idx, 22).text = str(row_data['實際工時'])
+
+                # 填寫第一頁
+                for i in range(min(records_per_page, len(df))):
+                    fill_exp_row(template_table, i + 2, df.iloc[i])
+
+                # 4. 匯出檔案
+                out_buffer = io.BytesIO()
+                doc.save(out_buffer)
+                out_buffer.seek(0)
+                
+                # 觸發瀏覽器下載
+                content = base64.b64encode(out_buffer.read()).decode()
+                href = f"data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,{content}"
+                
+                link = document.createElement("a")
+                link.href = href
+                link.download = "Filled_Logbook.docx"
+                link.click()
+
+            except Exception as e:
+                print(f"Error: {e}")
+                alert(f"處理失敗：{e}")
+            finally:
+                document.getElementById("loading").style.display = "none"
+                document.getElementById("process_btn").disabled = False
+
+        # 綁定按鈕點擊事件
+        document.getElementById("process_btn").onclick = create_proxy(process_files)
+    </script>
+</body>
+</html>
