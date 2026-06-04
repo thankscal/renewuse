@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工作經歷自動填表系統 (精確排版版)</title>
+    <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css" />
+    <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
+    <style>
+        body { font-family: "Microsoft JhengHei", sans-serif; max-width: 850px; margin: 20px auto; padding: 20px; line-height: 1.6; background-color: #f4f7f6; }
+        .container { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #0056b3; text-align: center; margin-bottom: 10px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; }
+        input[type="text"], input[type="date"], input[type="file"], select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        .radio-group { display: flex; gap: 20px; padding: 10px 0; }
+        .submit-btn { background: #0056b3; color: white; padding: 15px 20px; border: none; cursor: pointer; font-size: 18px; width: 100%; border-radius: 4px; margin-top: 20px; }
+        .submit-btn:hover { background: #004494; }
+        .section { border: 1px solid #eee; padding: 20px; margin-bottom: 25px; border-radius: 6px; }
+        .section h3 { margin-top: 0; border-bottom: 2px solid #0056b3; padding-bottom: 5px; color: #333; }
+        .hint { font-size: 0.9em; color: #666; margin-top: 5px; }
+        #loading { display: none; text-align: center; color: #0056b3; font-weight: bold; margin-top: 15px; }
+        .warning-box { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; padding: 10px; border-radius: 4px; margin-bottom: 20px; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>工作經歷自動填表系統</h1>
+        <div class="warning-box">
+            <strong>使用說明：</strong><br>
+            1. 模板必須是 .docx 格式。<br>
+            2. 系統會自動保留封面、第9頁與第13頁，並刪除其餘頁面。<br>
+            3. 工作經歷會自動按每頁 7 筆分頁，並自動縮小字體以防跑版。
+        </div>
+        
+        <div class="section">
+            <h3>1. 工作地點</h3>
+            <div class="radio-group">
+                <label><input type="radio" name="location_city" value="桃園" checked> 桃園 (CAL-EMO/CKS)</label>
+                <label><input type="radio" name="location_city" value="高雄"> 高雄 (CAL-EMO/KHH)</label>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>2. 基本資料</h3>
+            <div class="form-group">
+                <label>我的名字 (全名):</label>
+                <input type="text" id="full_name" placeholder="例如：王小明">
+            </div>
+            <div class="form-group">
+                <label>工號 (ID):</label>
+                <input type="text" id="id_no">
+            </div>
+            <div class="form-group">
+                <label>生日:</label>
+                <input type="date" id="birthday">
+            </div>
+            <div class="form-group">
+                <label>國籍:</label>
+                <input type="text" id="nationality" value="中華民國">
+            </div>
+            <div class="form-group">
+                <label>永久住址:</label>
+                <input type="text" id="address">
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>3. 執照與聘僱資訊</h3>
+            <div class="form-group">
+                <label>執照號碼:</label>
+                <input type="text" id="license_no">
+            </div>
+            <div class="form-group">
+                <label>執照類別:</label>
+                <input type="text" id="license_type" value="B1.1">
+                <div class="hint">預設為 B1.1，可自行修改</div>
+            </div>
+            <div class="form-group">
+                <label>聘僱日期 (自):</label>
+                <input type="date" id="hire_date_from">
+            </div>
+            <div class="form-group">
+                <label>職務:</label>
+                <input type="text" id="position" placeholder="例如：修護員">
+            </div>
+            <div class="form-group">
+                <label>工作機型 (點擊選擇):</label>
+                <select id="aircraft_type">
+                    <option value="B737-800">B737-800</option>
+                    <option value="B747-400">B747-400</option>
+                    <option value="B-777-300">B-777-300</option>
+                    <option value="B787">B787</option>
+                    <option value="A330-300">A330-300</option>
+                    <option value="A350-900">A350-900</option>
+                    <option value="A321NEO">A321NEO</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>4. 檔案上傳</h3>
+            <div class="form-group">
+                <label>上傳 Word 模板 (.docx):</label>
+                <input type="file" id="word_template" accept=".docx">
+            </div>
+            <div class="form-group">
+                <label>上傳工作經歷 (Excel):</label>
+                <input type="file" id="excel_data" accept=".xlsx">
+            </div>
+        </div>
+
+        <button id="process_btn" class="submit-btn">產生並下載 WORD</button>
+        <div id="loading">正在處理中，請稍候... (初次運行需載入 Python 環境)</div>
+    </div>
+
+    <py-config>
+        packages = ["pandas", "openpyxl", "python-docx"]
+    </py-config>
+
+    <script type="py">
+        from pyscript import document
+        from pyodide.ffi import create_proxy
+        import pandas as pd
+        from docx import Document
+        from docx.shared import Pt
+        from docx.enum.text import WD_ALIGN_PARAGRAPH
+        import io
+        import base64
+        import copy
+
+        async def process_files(event):
+            document.getElementById("loading").style.display = "block"
+            document.getElementById("process_btn").disabled = True
+            
+            try:
+                # 1. 讀取表單數據
+                full_name = document.getElementById("full_name").value
+                last_name = full_name[0] if full_name else ""
+                first_name = full_name[1:] if len(full_name) > 1 else ""
+                id_no = document.getElementById("id_no").value
+                birthday = document.getElementById("birthday").value
+                nationality = document.getElementById("nationality").value
+                address = document.getElementById("address").value
+                license_no = document.getElementById("license_no").value
+                license_type = document.getElementById("license_type").value
+                hire_date_from = document.getElementById("hire_date_from").value
+                position = document.getElementById("position").value
+                aircraft_type = document.getElementById("aircraft_type").value
+                
+                location_city = "桃園"
+                radios = document.getElementsByName("location_city")
+                for r in radios:
+                    if r.checked:
+                        location_city = r.value
+                location_code = "CAL-EMO/CKS" if location_city == "桃園" else "CAL-EMO/KHH"
+
+                # 2. 讀取檔案
+                word_input = document.getElementById("word_template")
+                excel_input = document.getElementById("excel_data")
+                if not word_input.files or not excel_input.files:
+                    alert("請先上傳兩個檔案！")
+                    return
+
+                word_bytes = (await word_input.files.item(0).arrayBuffer()).to_bytes()
+                excel_bytes = (await excel_input.files.item(0).arrayBuffer()).to_bytes()
+                
+                source_doc = Document(io.BytesIO(word_bytes))
+                df = pd.read_excel(io.BytesIO(excel_bytes))
+
+                # 3. 建立新文件並保留指定頁面
+                # 我們從 source_doc 提取內容
+                # 封面: source_doc.paragraphs 0-12 左右
+                # 個人資訊: source_doc.tables[3, 4, 5]
+                # 經歷模板: source_doc.tables[12]
+                
+                new_doc = Document()
+                # 複製頁面邊距設定 (簡化處理，直接在 source_doc 上修改並刪除不需要的部分)
+                
+                # A. 處理封面 (第1頁)
+                for p in source_doc.paragraphs:
+                    if "姓名(Name)" in p.text:
+                        # 精確替換，不破壞原有樣式
+                        p.text = p.text.replace("姓名(Name) :", f"姓名(Name) : {full_name}")
+                        p.text = p.text.replace("員工號(ID) :", f"員工號(ID) : {id_no}")
+
+                # B. 處理個人資訊頁 (第9頁)
+                t3 = source_doc.tables[3]
+                t3.cell(1, 1).text = last_name
+                t3.cell(1, 3).text = first_name
+                t3.cell(2, 1).text = birthday
+                t3.cell(2, 3).text = nationality
+                t3.cell(3, 1).text = address
+
+                t4 = source_doc.tables[4]
+                t4.cell(0, 1).text = "台灣"
+                t4.cell(0, 2).text = license_no
+                t4.cell(0, 3).text = license_type
+
+                t5 = source_doc.tables[5]
+                # 兩組內容都要填
+                for col_offset in [0, 4]: # 左邊一組，右邊一組
+                    t5.cell(0, col_offset + 2).text = "中華航空"
+                    t5.cell(1, col_offset + 2).text = hire_date_from
+                    t5.cell(1, col_offset + 3).text = "迄今"
+                    t5.cell(2, col_offset + 2).text = position
+                    t5.cell(2, col_offset + 4).text = "飛機修護"
+                    t5.cell(3, col_offset + 2).text = aircraft_type
+
+                # C. 處理工作經歷 (第13頁)
+                exp_template_table = source_doc.tables[12]
+                records_per_page = 7
+                
+                def set_cell_style(cell, text, size=8):
+                    cell.text = text
+                    for paragraph in cell.paragraphs:
+                        for run in paragraph.runs:
+                            run.font.size = Pt(size)
+                            run.font.name = 'Arial'
+
+                def fill_exp_row(table, row_idx, row_data):
+                    set_cell_style(table.cell(row_idx, 0), str(row_data['日期']).split(' ')[0])
+                    set_cell_style(table.cell(row_idx, 1), location_code)
+                    set_cell_style(table.cell(row_idx, 3), str(row_data['機號']))
+                    set_cell_style(table.cell(row_idx, 4), "A1-Line")
+                    set_cell_style(table.cell(row_idx, 5), license_type)
+                    # Perform 欄位 (Index 17) 填入 V
+                    set_cell_style(table.cell(row_idx, 17), "V")
+                    set_cell_style(table.cell(row_idx, 21), str(row_data['任務描述']), size=7) # 任務描述通常較長，字體更小
+                    set_cell_style(table.cell(row_idx, 22), str(row_data['實際工時']))
+
+                # 填寫第一頁經歷
+                for i in range(min(records_per_page, len(df))):
+                    fill_exp_row(exp_template_table, i + 2, df.iloc[i])
+
+                # D. 清理不需要的頁面 (這是最難的部分，我們改用「只複製需要的表格與段落」到新文件)
+                final_doc = Document()
+                # 1. 複製封面段落
+                for p in source_doc.paragraphs:
+                    if p.text.strip() or "姓名(Name)" in p.text:
+                        new_p = final_doc.add_paragraph(p.text)
+                        new_p.style = p.style
+                        if "姓名(Name)" in p.text: break # 封面結束
+                
+                final_doc.add_page_break()
+                # 2. 複製第9頁個人資訊表格
+                final_doc.add_paragraph("第2節 個人資訊 (Personnel Data)").bold = True
+                # 複製 Table 3, 4, 5
+                for i in [3, 4, 5]:
+                    old_table = source_doc.tables[i]
+                    new_table = final_doc.add_table(rows=len(old_table.rows), cols=len(old_table.columns))
+                    new_table.style = old_table.style
+                    for r in range(len(old_table.rows)):
+                        for c in range(len(old_table.columns)):
+                            new_table.cell(r, c).text = old_table.cell(r, c).text
+                
+                # 3. 複製工作經歷表格 (循環分頁)
+                for i in range(0, len(df), records_per_page):
+                    final_doc.add_page_break()
+                    final_doc.add_paragraph("第5節 工作經歷紀錄 (Maintenance Experience records)").bold = True
+                    
+                    # 複製經歷表模板
+                    old_table = source_doc.tables[12]
+                    new_table = final_doc.add_table(rows=len(old_table.rows), cols=len(old_table.columns))
+                    new_table.style = old_table.style
+                    
+                    # 複製標題列 (Row 0, 1)
+                    for r in range(2):
+                        for c in range(len(old_table.columns)):
+                            new_table.cell(r, c).text = old_table.cell(r, c).text
+                    
+                    # 填寫該頁數據
+                    page_end = min(i + records_per_page, len(df))
+                    for j in range(i, page_end):
+                        local_row_idx = (j % records_per_page) + 2
+                        fill_exp_row(new_table, local_row_idx, df.iloc[j])
+
+                # 4. 下載
+                out_buffer = io.BytesIO()
+                final_doc.save(out_buffer)
+                out_buffer.seek(0)
+                content = base64.b64encode(out_buffer.read()).decode()
+                href = f"data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,{content}"
+                
+                link = document.createElement("a")
+                link.href = href
+                link.download = "Final_Logbook.docx"
+                link.click()
+
+            except Exception as e:
+                print(f"Error: {e}")
+                alert(f"處理失敗：{e}")
+            finally:
+                document.getElementById("loading").style.display = "none"
+                document.getElementById("process_btn").disabled = False
+
+        document.getElementById("process_btn").onclick = create_proxy(process_files)
+    </script>
+</body>
+</html>
