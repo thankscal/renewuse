@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工作經歷自動填表系統 (最終精確優化版)</title>
+    <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css" />
+    <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
+    <style>
+        body { font-family: "Microsoft JhengHei", sans-serif; max-width: 850px; margin: 20px auto; padding: 20px; line-height: 1.6; background-color: #f4f7f6; }
+        .container { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #0056b3; text-align: center; margin-bottom: 5px; }
+        .announcement { background: #fff3cd; border: 1px solid #ffeeba; padding: 15px; border-radius: 4px; margin-bottom: 25px; font-size: 0.95em; color: #856404; }
+        .section { border: 1px solid #eee; padding: 20px; margin-bottom: 25px; border-radius: 6px; }
+        .section h3 { margin-top: 0; border-bottom: 2px solid #0056b3; padding-bottom: 5px; color: #333; font-size: 1.2em; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; }
+        input[type="text"], input[type="date"], input[type="file"], select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        .radio-group { display: flex; flex-wrap: wrap; gap: 15px; padding: 10px 0; }
+        .radio-item { display: flex; align-items: center; font-size: 0.95em; cursor: pointer; }
+        .radio-item input { margin-right: 6px; }
+        .checkbox-group { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; padding: 10px; background: #fafafa; border-radius: 4px; }
+        .submit-btn { background: #0056b3; color: white; padding: 15px 20px; border: none; cursor: pointer; font-size: 18px; width: 100%; border-radius: 4px; margin-top: 20px; font-weight: bold; }
+        .submit-btn:disabled { background: #ccc; cursor: not-allowed; }
+        #status-container { margin-top: 15px; display: none; border: 1px solid #b8daff; padding: 15px; border-radius: 4px; background: #e7f3ff; }
+        .progress-bar { width: 100%; height: 12px; background: #fff; border: 1px solid #b8daff; border-radius: 6px; overflow: hidden; margin-bottom: 8px; }
+        .progress-fill { height: 100%; background: #0056b3; width: 0%; transition: width 0.3s; }
+        #status-text { text-align: center; font-size: 0.9em; color: #0056b3; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>工作經歷自動填表系統</h1>
+        
+        <div class="announcement">
+            <strong>重要說明：</strong><br>
+            1. 本網頁不收費，跟你收費是詐騙。<br>
+            2. 請上傳 <b>三頁QP模板.docx</b> 與 <b>工作經歷 Excel</b>。<br>
+            3. 本版本修復了封面、執照偏移、固定列高並優化了產生速度。
+        </div>
+
+        <div class="section">
+            <h3>1. 基本資料</h3>
+            <div class="form-group">
+                <label>我的名字 (全名):</label>
+                <input type="text" id="full_name" placeholder="例如：王小明">
+            </div>
+            <div class="form-group">
+                <label>工號 (ID):</label>
+                <input type="text" id="id_no">
+            </div>
+            <div class="form-group">
+                <label>生日:</label>
+                <input type="date" id="birthday">
+            </div>
+            <div class="form-group">
+                <label>國籍:</label>
+                <input type="text" id="nationality" value="中華民國">
+            </div>
+            <div class="form-group">
+                <label>永久住址:</label>
+                <input type="text" id="address">
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>2. 執照與工作資訊</h3>
+            <div class="form-group">
+                <label>執照號碼:</label>
+                <input type="text" id="license_no">
+            </div>
+            <div class="form-group">
+                <label>執照類別:</label>
+                <input type="text" id="license_type" value="B1.1">
+            </div>
+            <div class="form-group">
+                <label>工作地點:</label>
+                <div class="radio-group">
+                    <label class="radio-item"><input type="radio" name="location_city" value="桃園" checked> 桃園 (CKS)</label>
+                    <label class="radio-item"><input type="radio" name="location_city" value="高雄"> 高雄 (KHH)</label>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>職務:</label>
+                <div class="radio-group">
+                    <label class="radio-item"><input type="radio" name="position" value="技術員" checked> 技術員</label>
+                    <label class="radio-item"><input type="radio" name="position" value="領工"> 領工</label>
+                    <label class="radio-item"><input type="radio" name="position" value="領班"> 領班</label>
+                    <label class="radio-item"><input type="radio" name="position" value="組長"> 組長</label>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>工作機型 (可複選):</label>
+                <div class="checkbox-group" id="aircraft_group">
+                    <label class="radio-item"><input type="checkbox" value="B737-800"> B737-800</label>
+                    <label class="radio-item"><input type="checkbox" value="B747-400"> B747-400</label>
+                    <label class="radio-item"><input type="checkbox" value="B-777-300"> B-777-300</label>
+                    <label class="radio-item"><input type="checkbox" value="B787"> B787</label>
+                    <label class="radio-item"><input type="checkbox" value="A330-300"> A330-300</label>
+                    <label class="radio-item"><input type="checkbox" value="A350-900"> A350-900</label>
+                    <label class="radio-item"><input type="checkbox" value="A321NEO"> A321NEO</label>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>聘僱日期 (自):</label>
+                <input type="date" id="hire_date_from">
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>3. 檔案上傳</h3>
+            <div class="form-group">
+                <label>上傳 Word 模板 (三頁QP模板.docx):</label>
+                <input type="file" id="word_template" accept=".docx">
+            </div>
+            <div class="form-group">
+                <label>上傳工作經歷 (Excel):</label>
+                <input type="file" id="excel_data" accept=".xlsx">
+            </div>
+        </div>
+
+        <button id="process_btn" class="submit-btn">產生並下載 WORD</button>
+        
+        <div id="status-container">
+            <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
+            <div id="status-text">正在初始化環境...</div>
+        </div>
+    </div>
+
+    <py-config>
+        packages = ["pandas", "openpyxl", "python-docx"]
+    </py-config>
+
+    <script type="py">
+        from pyscript import document
+        from pyodide.ffi import create_proxy
+        import pandas as pd
+        from docx import Document
+        from docx.shared import Pt, Inches
+        from docx.enum.table import WD_ROW_HEIGHT_RULE
+        import io, base64, time, copy, asyncio
+
+        async def process_files(event):
+            container = document.getElementById("status-container")
+            fill = document.getElementById("progress-fill")
+            text = document.getElementById("status-text")
+            btn = document.getElementById("process_btn")
+            
+            container.style.display = "block"
+            btn.disabled = True
+            
+            async def update_progress(pct, msg):
+                fill.style.width = f"{pct}%"
+                text.innerText = msg
+                await asyncio.sleep(0.01)
+
+            try:
+                await update_progress(5, "讀取表單數據...")
+                full_name = document.getElementById("full_name").value
+                id_no = document.getElementById("id_no").value
+                birthday = document.getElementById("birthday").value
+                nationality = document.getElementById("nationality").value
+                address = document.getElementById("address").value
+                license_no = document.getElementById("license_no").value
+                license_type = document.getElementById("license_type").value
+                hire_date_from = document.getElementById("hire_date_from").value
+                pos_val = "技術員"
+                for r in document.getElementsByName("position"):
+                    if r.checked: pos_val = r.value
+                aircraft_list = [cb.value for cb in document.querySelectorAll("#aircraft_group input:checked")]
+                aircraft_type = "/".join(aircraft_list)
+                loc_city = "桃園"
+                for r in document.getElementsByName("location_city"):
+                    if r.checked: loc_city = r.value
+                loc_code = "CAL-EMO/CKS" if loc_city == "桃園" else "CAL-EMO/KHH"
+
+                await update_progress(15, "載入檔案...")
+                word_files = document.getElementById("word_template").files
+                excel_files = document.getElementById("excel_data").files
+                if not word_files.length or not excel_files.length:
+                    alert("請先上傳 Word 模板與 Excel 經歷檔案！")
+                    return
+
+                word_bytes = (await word_files.item(0).arrayBuffer()).to_bytes()
+                excel_bytes = (await excel_files.item(0).arrayBuffer()).to_bytes()
+                doc = Document(io.BytesIO(word_bytes))
+                df = pd.read_excel(io.BytesIO(excel_bytes))
+
+                await update_progress(30, "填充封面與個人資訊...")
+                
+                # 第一頁姓名與員工號
+                try:
+                    t_cover = doc.tables[5]
+                    t_cover.cell(0,0).text = f"Name: {full_name}"
+                    t_cover.cell(0,3).text = f"ID No. {id_no}"
+                except:
+                    pass
+
+                # 個人資訊表格 (Table 0)
+                t_personal = doc.tables[0]
+                t_personal.cell(1, 1).text = f"姓(Surname): {full_name[0] if full_name else ''}"
+                t_personal.cell(1, 3).text = f"名(Given Name): {full_name[1:] if len(full_name) > 1 else ''}"
+                t_personal.cell(2, 1).text = f"生日(Date of birth): {birthday}"
+                t_personal.cell(2, 3).text = f"國籍(Nationality): {nationality}"
+                t_personal.cell(3, 1).text = f"永久地址(Permanent Address): {address}"
+
+                # 執照資訊 (Table 1) - 修正偏移，從 Cell 1 開始
+                t_license = doc.tables[1]
+                t_license.cell(0, 1).text = "台灣"
+                t_license.cell(0, 2).text = license_no
+                t_license.cell(0, 3).text = license_type
+
+                # 聘僱資訊 (Table 2)
+                t_employment = doc.tables[2]
+                def fill_employment(table):
+                    for row in table.rows:
+                        for cell in row.cells:
+                            if "Employer" in cell.text: cell.text = "雇主(Employer): 中華航空"
+                            if "From" in cell.text: cell.text = f"自 (From ): {hire_date_from}"
+                            if "To" in cell.text: cell.text = "到(To): 迄今"
+                            if "Position" in cell.text: cell.text = f"職務 (Position): {pos_val}"
+                            if "Work Nature" in cell.text: cell.text = "工作性質 (Work Nature): 飛機修護"
+                            if "Aircraft/product Type" in cell.text: cell.text = f"工作機型或產品類型(Aircraft/product Type): {aircraft_type}"
+                fill_employment(t_employment)
+
+                await update_progress(50, "處理經歷與自動判斷機型...")
+                t_experience = doc.tables[4]
+                
+                # 使用固定欄位位置
+
+                def get_aircraft_model(reg):
+                    reg = str(reg).upper()
+                    if reg.startswith("B-181"): return "321-200"
+                    if reg.startswith("B-183"): return "330-300"
+                    if reg.startswith("B-189"): return "350-900"
+                    if reg.startswith("B-180"): return "777-300ER"
+                    if reg.startswith("B-1877"): return "777-300F"
+                    if reg.startswith("B-187"): return "744-400F"
+                    if reg.startswith("B-186"): return "738-800"
+                    return ""
+
+                def fill_row(table, row_idx, row_data=None):
+                    # 設定固定列高 (約 0.8cm)
+                    row = table.rows[row_idx]
+                    row.height_rule = WD_ROW_HEIGHT_RULE.AT_LEAST
+                    row.height = Pt(28) 
+                    
+                    cells = row.cells
+                    if row_data is None:
+                        return # 只設定高度，不填資料
+
+                    reg_val = str(row_data['機號'])
+                    model_val = get_aircraft_model(reg_val)
+                    barcode = str(row_data.get('任務條碼', ''))
+                    
+                    data_map = {
+                        0: str(row_data['日期']).split(' ')[0],
+                        1: loc_code,
+                        2: model_val,
+                        3: reg_val,
+                        4: "A1-Line",
+                        5: license_type,
+                        17: "V",
+                        21: str(row_data['任務描述']),
+                        22: str(row_data['實際工時']),
+                        23: barcode
+                    }
+                    for idx, val in data_map.items():
+                        if idx < len(cells):
+                            cells[idx].text = ""
+                            p = cells[idx].paragraphs[0]
+                            run = p.add_run(val)
+                            run.font.size = Pt(8.5)
+                            if idx == 22: run.font.size = Pt(7)
+                            if idx == 17:
+                                run.text = "V"
+
+                records_per_page = 7
+                # 填寫第一頁經歷 (並設定所有列高)
+                for i in range(records_per_page):
+                    data = df.iloc[i] if i < len(df) else None
+                    fill_row(t_experience, i + 2, data)
+
+                # 處理多頁經歷 (優化速度: 預先複製 XML)
+                if len(df) > records_per_page:
+                    await update_progress(70, "正在產生多頁經歷...")
+                    template_xml = copy.deepcopy(t_experience._element)
+                    
+                    for i in range(records_per_page, len(df), records_per_page):
+                        doc.add_page_break()
+                        doc.add_paragraph("第5節 工作經歷紀錄 (Maintenance Experience records)", doc.styles['Heading 1'])
+                        
+                        new_tbl = doc.add_table(rows=0, cols=0)
+                        new_tbl._element.getparent().replace(new_tbl._element, copy.deepcopy(template_xml))
+                        actual_table = doc.tables[-1]
+                        
+                        # 複製最後簽名表
+                        try:
+                            footer_xml = copy.deepcopy(doc.tables[5]._element)
+                            footer_tbl = doc.add_table(rows=0, cols=0)
+                            footer_tbl._element.getparent().replace(footer_tbl._element, copy.deepcopy(footer_xml))
+                        except:
+                            pass
+
+                        
+                        # 填寫資料與設定列高
+                        for r_offset in range(records_per_page):
+                            data_idx = i + r_offset
+                            data = df.iloc[data_idx] if data_idx < len(df) else None
+                            
+                            # 清空模板殘留內容
+                            for c_idx in range(len(actual_table.columns)):
+                                actual_table.cell(r_offset + 2, c_idx).text = ""
+                                
+                            fill_row(actual_table, r_offset + 2, data)
+
+                await update_progress(100, "處理完成！準備下載...")
+                out = io.BytesIO()
+                doc.save(out)
+                out.seek(0)
+                b64 = base64.b64encode(out.read()).decode()
+                from js import window
+                window.eval(f"""
+                    const a = document.createElement('a');
+                    a.href = 'data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,{b64}';
+                    a.download = 'Logbook_Final.docx';
+                    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                """)
+
+            except Exception as e:
+                print(f"Error: {e}")
+                alert(f"處理失敗：{e}")
+            finally:
+                btn.disabled = False
+                setTimeout(create_proxy(lambda: setattr(container.style, 'display', 'none')), 3000)
+
+        from js import setTimeout, alert
+        document.getElementById("process_btn").onclick = create_proxy(process_files)
+    </script>
+</body>
+</html>
